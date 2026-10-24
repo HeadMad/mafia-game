@@ -1,15 +1,10 @@
 # Байкальская Мафия
 
-Веб-приложение для ведущего психологической игры «Байкальская Мафия» (сеттинг: фауна Байкала).
+Приложение ведущего для психологической игры «Байкальская Мафия».
 
-## Стек
+**Стек:** Svelte 5 + Vite · PWA · Atomic Architecture · GitHub Pages
 
-- Svelte 5 + SvelteKit
-- Чистый JavaScript (JSDoc)
-- Atomic Architecture ([HeadMad/atomic-architecture](https://github.com/HeadMad/atomic-architecture))
-- Static adapter (offline SPA)
-
-## Разработка
+## Локально
 
 ```bash
 npm install
@@ -19,7 +14,27 @@ npm run dev
 ## Сборка
 
 ```bash
-npm run build
+BASE_PATH=/mafia-game/ npm run build
 ```
 
-Артефакты в `build/`.
+Результат в `dist/`.
+
+## GitHub Pages
+
+После пуша в `main` workflow **Build and Deploy** собирает проект и публикует на:
+
+**https://headmad.github.io/mafia-game/**
+
+### Настройка репозитория (один раз)
+
+1. **Settings → Pages**
+2. **Source:** `GitHub Actions` (не branch `gh-pages`)
+3. Сохранить
+
+После первого успешного деплоя сайт станет доступен по ссылке выше.  
+PWA: в Chrome/Safari на телефоне — «На экран Домой».
+
+## PWA
+
+- `manifest.webmanifest` и service worker генерируются `vite-plugin-pwa`
+- `registerType: autoUpdate` — новая версия подтягивается при следующем визите
