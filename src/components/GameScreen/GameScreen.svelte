@@ -151,6 +151,21 @@
 			<h3>{gameState.gameOver.text}</h3>
 			<p>{gameState.gameOver.sub}</p>
 		</div>
+	{:else if gameState.intermission}
+		<div class="intermission">
+			<div class="intermission-card">
+				<p class="intermission-kicker">Промежуточные итоги</p>
+				<h2>Круг {gameState.intermission.toRound}</h2>
+				<div class="intermission-text">{gameState.intermission.lines.join('\n')}</div>
+				<button
+					type="button"
+					class="intermission-btn"
+					onclick={() => gameState.continueFromIntermission()}
+				>
+					Продолжить
+				</button>
+			</div>
+		</div>
 	{:else}
 		{#if speech}
 			<div class="phase-speech">{speech}</div>
@@ -186,6 +201,7 @@
 		{/if}
 	{/if}
 
+	{#if !gameState.intermission && !gameState.gameOver}
 	<div class="players-wrap">
 		<div class="players-list">
 			{#each gameState.players as player (player.id)}
@@ -202,8 +218,9 @@
 			{/each}
 		</div>
 	</div>
+	{/if}
 
-	{#if !gameState.gameOver}
+	{#if !gameState.gameOver && !gameState.intermission}
 		<div class="nav-bar">
 			<button
 				type="button"
@@ -506,6 +523,60 @@
 		flex-direction: column;
 		gap: 8px;
 		overflow: visible;
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+
+	.intermission {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px 8px calc(var(--nav-h) + 24px);
+	}
+	.intermission-card {
+		width: 100%;
+		background: var(--surface);
+		border-radius: 16px;
+		padding: 24px 20px 20px;
+		text-align: center;
+		box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+	}
+	.intermission-kicker {
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.4px;
+		margin-bottom: 8px;
+	}
+	.intermission-card h2 {
+		font-size: 26px;
+		font-weight: 800;
+		letter-spacing: -0.4px;
+		margin-bottom: 16px;
+	}
+	.intermission-text {
+		font-size: 15px;
+		line-height: 1.55;
+		color: var(--text);
+		white-space: pre-wrap;
+		text-align: left;
+		margin-bottom: 20px;
+	}
+	.intermission-btn {
+		display: block;
+		width: 100%;
+		padding: 16px;
+		border: none;
+		border-radius: 14px;
+		background: var(--accent);
+		color: #fff;
+		font-size: 17px;
+		font-weight: 600;
+	}
+	.intermission-btn:active {
+		opacity: 0.75;
 	}
 
 	.nav-bar {

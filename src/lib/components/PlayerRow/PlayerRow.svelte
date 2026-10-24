@@ -355,6 +355,7 @@
 		align-items: center;
 		justify-content: center;
 		padding: 0;
+		transform: scaleX(-1);
 	}
 	.edit-name-btn:active {
 		background: rgba(0, 0, 0, 0.06);

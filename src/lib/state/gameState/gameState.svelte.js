@@ -41,6 +41,8 @@ function createGameState() {
 	let voleAssigned = $state(false);
 	let badgeUsed = $state(/** @type {Record<string, boolean>} */ ({}));
 	let gameOver = $state(/** @type {{ winner: string, text: string, sub: string }|null} */ (null));
+	/** @type {{ fromRound: number, toRound: number, lines: string[] }|null} */
+	let intermission = $state(null);
 
 	/** @type {{ open: boolean, message: string, okText: string, cancelText: string, danger: boolean, alertOnly: boolean, resolve: ((v: boolean) => void)|null }} */
 	let confirm = $state({
@@ -107,7 +109,8 @@ function createGameState() {
 					voleEnabled,
 					voleAssigned,
 					badgeUsed,
-					gameOver
+					gameOver,
+					intermission
 				})
 			);
 		} catch {
@@ -135,6 +138,7 @@ function createGameState() {
 			voleAssigned = s.voleAssigned;
 			badgeUsed = s.badgeUsed || {};
 			gameOver = s.gameOver;
+			intermission = s.intermission || null;
 			return true;
 		} catch {
 			return false;
@@ -190,6 +194,7 @@ function createGameState() {
 			voleAssigned = false;
 			badgeUsed = {};
 			gameOver = null;
+			intermission = null;
 			initPool();
 		} else {
 			while (players.length < total) {
@@ -233,6 +238,7 @@ function createGameState() {
 		voleAssigned = false;
 		badgeUsed = {};
 		gameOver = null;
+		intermission = null;
 		try {
 			localStorage.removeItem(STORAGE_KEY);
 		} catch {
@@ -588,17 +594,50 @@ function createGameState() {
 
 	function nextPhase() {
 		if (gameOver) return;
+		if (intermission) return;
 		const phase = currentPhase();
 		if (phase === 'day') {
+			const fromRound = round;
+			const aliveBefore = players.filter((p) => p.alive);
+			const deadBefore = players.filter((p) => !p.alive);
+			const exiledThisDay = players.filter(
+				(p) => !p.alive && p.badges.some((b) => b.type === 'exile' && b.round === fromRound)
+			);
+
+			const lines = [];
+			lines.push(`Круг ${fromRound} завершён.`);
+			if (exiledThisDay.length) {
+				lines.push('');
+				lines.push('Изгнаны голосованием:');
+				exiledThisDay.forEach((p) => {
+					lines.push(`• Игрок ${p.id} (${p.name})`);
+				});
+			} else {
+				lines.push('');
+				lines.push('Никого не изгнали.');
+			}
+			lines.push('');
+			lines.push(`В живых: ${aliveBefore.length}`);
+			lines.push(`Выбыло: ${deadBefore.length}`);
+			lines.push('');
+			lines.push(`Начинается круг ${fromRound + 1}.`);
+			lines.push('Город засыпает…');
+
 			players = players.map((p) => ({ ...p, badges: [] }));
 			badgeUsed = {};
 			const alive = players.filter((p) => p.alive);
 			const dead = players.filter((p) => !p.alive);
 			players = [...alive, ...dead];
-			round++;
-			phaseIndex = 0;
-			addLog(`——— Круг ${round} ———`);
-			addLog('Город засыпает. Ночь.');
+
+			intermission = {
+				fromRound,
+				toRound: fromRound + 1,
+				lines
+			};
+			addLog(`——— Конец круга ${fromRound} ———`);
+			checkWin();
+			save();
+			return;
 		} else {
 			phaseIndex++;
 			if (phaseIndex >= phases.length) phaseIndex = phases.length - 1;
@@ -610,6 +649,18 @@ function createGameState() {
 				addLog('➔ День. Голосование.');
 			}
 		}
+		checkWin();
+		save();
+	}
+
+	function continueFromIntermission() {
+		if (!intermission) return;
+		const to = intermission.toRound;
+		intermission = null;
+		round = to;
+		phaseIndex = 0;
+		addLog(`——— Круг ${round} ———`);
+		addLog('Город засыпает. Ночь.');
 		checkWin();
 		save();
 	}
@@ -670,6 +721,9 @@ function createGameState() {
 		get gameOver() {
 			return gameOver;
 		},
+		get intermission() {
+			return intermission;
+		},
 		get confirm() {
 			return confirm;
 		},
@@ -687,6 +741,7 @@ function createGameState() {
 		renamePlayer,
 		buildMorningSummary,
 		nextPhase,
+		continueFromIntermission,
 		prevPhase,
 		load,
 		save,
