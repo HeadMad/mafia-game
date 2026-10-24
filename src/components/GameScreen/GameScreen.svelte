@@ -57,7 +57,17 @@
 		menuOpen = false;
 		modal = { open: true, title, body };
 	}
+
+	/** @param {MouseEvent} e */
+	function onDocPointerDown(e) {
+		if (!menuOpen) return;
+		const t = /** @type {HTMLElement} */ (e.target);
+		if (t.closest('.menu-wrap')) return;
+		menuOpen = false;
+	}
 </script>
+
+<svelte:window onpointerdown={onDocPointerDown} />
 
 <section class="game">
 	<header class="game-header">
@@ -72,11 +82,10 @@
 				{phaseShort(phase)}
 			</span>
 		</div>
-		<button type="button" class="menu-btn" onclick={() => (menuOpen = !menuOpen)}>☰</button>
-	</header>
-
-	{#if menuOpen}
-		<div class="menu-popover">
+		<div class="menu-wrap">
+			<button type="button" class="menu-btn" onclick={(e) => { e.stopPropagation(); menuOpen = !menuOpen; }}>☰</button>
+			{#if menuOpen}
+				<div class="menu-popover" role="menu">
 			<button type="button" class="menu-item danger" onclick={onNewGame}>Новая игра</button>
 			<button
 				type="button"
@@ -132,8 +141,10 @@
 			>
 				Лог партии
 			</button>
+				</div>
+			{/if}
 		</div>
-	{/if}
+	</header>
 
 	{#if gameState.gameOver}
 		<div class="win-banner">
@@ -146,22 +157,24 @@
 		{/if}
 
 		{#if isNight || phase === 'day'}
-			<div class="phase-panel">
-				<div class="pool-avatars">
-					{#each poolIcons() as icon, i (i)}
-						<div class="pool-avatar">{icon}</div>
-					{:else}
-						<div class="pool-avatar empty">—</div>
-					{/each}
-				</div>
-				<div class="phase-action">
-					<span class="phase-action-text">{actionInfo.text}</span>
-					<span
-						class="action-badge {actionInfo.cls}"
-						class:used={gameState.badgeUsed[phase]}
-					>
-						{actionInfo.badge}
-					</span>
+			<div class="phase-sticky">
+				<div class="phase-panel">
+					<div class="pool-avatars">
+						{#each poolIcons() as icon, i (i)}
+							<div class="pool-avatar">{icon}</div>
+						{:else}
+							<div class="pool-avatar empty">—</div>
+						{/each}
+					</div>
+					<div class="phase-action">
+						<span class="phase-action-text">{actionInfo.text}</span>
+						<span
+							class="action-badge {actionInfo.cls}"
+							class:used={gameState.badgeUsed[phase]}
+						>
+							{actionInfo.badge}
+						</span>
+					</div>
 				</div>
 			</div>
 		{/if}
@@ -266,6 +279,7 @@
 		min-height: 100%;
 		padding: 16px 16px 0;
 		padding-top: max(16px, env(safe-area-inset-top));
+		overflow: visible;
 	}
 
 	.game-header {
@@ -304,6 +318,11 @@
 		color: var(--peaceful);
 	}
 
+	.menu-wrap {
+		position: relative;
+		flex-shrink: 0;
+	}
+
 	.menu-btn {
 		background: rgba(0, 0, 0, 0.05);
 		border: none;
@@ -315,15 +334,15 @@
 	}
 
 	.menu-popover {
-		position: fixed;
-		top: max(52px, calc(env(safe-area-inset-top) + 44px));
-		right: 12px;
+		position: absolute;
+		top: calc(100% + 6px);
+		right: 0;
 		background: var(--surface);
 		border-radius: 14px;
 		min-width: 220px;
 		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 		overflow: hidden;
-		z-index: 101;
+		z-index: 120;
 	}
 	.menu-item {
 		display: block;
@@ -372,12 +391,24 @@
 		margin-bottom: 10px;
 	}
 
+	.phase-sticky {
+		position: sticky;
+		top: 0;
+		z-index: 40;
+		background: var(--bg);
+		padding: 8px 0 10px;
+		margin: 0 -4px;
+		padding-left: 4px;
+		padding-right: 4px;
+		border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+	}
+
 	.phase-panel {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
-		padding: 4px 0 12px;
+		padding: 4px 0;
 	}
 	.pool-avatars {
 		display: flex;
@@ -462,12 +493,19 @@
 	.players-wrap {
 		flex: 1;
 		overflow-y: auto;
+		overflow-x: visible;
 		padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
+		/* место под outline карточек */
+		padding-left: 3px;
+		padding-right: 3px;
+		margin-left: -3px;
+		margin-right: -3px;
 	}
 	.players-list {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: 8px;
+		overflow: visible;
 	}
 
 	.nav-bar {

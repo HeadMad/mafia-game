@@ -40,7 +40,6 @@
 	let editValue = $state('');
 	let longTimer = $state(/** @type {ReturnType<typeof setTimeout>|null} */ (null));
 	let longFired = $state(false);
-	let lastTap = $state(0);
 	/** После touch игнорируем мышиные/клик-события (ghost click на другую строку после re-render) */
 	let touchActive = $state(false);
 	let suppressClickUntil = $state(0);
@@ -133,9 +132,16 @@
 		onrow();
 	}
 
+	/** @type {HTMLInputElement|null} */
+	let nameInput = $state(null);
+
 	function startEdit() {
 		editing = true;
 		editValue = player.name;
+		queueMicrotask(() => {
+			nameInput?.focus();
+			nameInput?.select();
+		});
 	}
 
 	function finishEdit() {
@@ -178,6 +184,7 @@
 		{#if editing}
 			<input
 				class="player-name-input"
+				bind:this={nameInput}
 				bind:value={editValue}
 				onblur={finishEdit}
 				onkeydown={(e) => {
@@ -192,24 +199,19 @@
 				}}
 			/>
 		{:else}
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="player-name"
-				ondblclick={(e) => {
-					e.stopPropagation();
-					startEdit();
-				}}
-				ontouchend={(e) => {
-					const now = Date.now();
-					if (now - lastTap < 350) {
-						e.preventDefault();
+			<div class="player-name-row">
+				<div class="player-name">{player.name}</div>
+				<button
+					type="button"
+					class="edit-name-btn"
+					aria-label="Редактировать имя"
+					onclick={(e) => {
 						e.stopPropagation();
 						startEdit();
-					}
-					lastTap = now;
-				}}
-			>
-				{player.name}
+					}}
+				>
+					✎
+				</button>
 			</div>
 		{/if}
 		<div class="player-role">{roleLabel}</div>
@@ -245,6 +247,8 @@
 		min-height: 56px;
 		user-select: none;
 		cursor: pointer;
+		overflow: visible;
+		position: relative;
 	}
 
 	.player-row.faction-predator {
@@ -269,7 +273,12 @@
 		text-decoration: line-through;
 	}
 	.player-row.highlight {
-		box-shadow: 0 0 0 2px var(--accent);
+		/* outline не клипится overflow родителя так же сильно, как box-shadow в некоторых движках —
+		   используем оба + запас по margin у списка */
+		outline: 2px solid var(--accent);
+		outline-offset: 0px;
+		box-shadow: none;
+		z-index: 1;
 	}
 
 	.player-num {
@@ -318,12 +327,37 @@
 		flex-direction: column;
 		gap: 2px;
 	}
+	.player-name-row {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		min-width: 0;
+	}
 	.player-name {
 		font-size: 16px;
 		font-weight: 560;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		min-width: 0;
+	}
+	.edit-name-btn {
+		flex-shrink: 0;
+		width: 28px;
+		height: 28px;
+		border: none;
+		border-radius: 8px;
+		background: transparent;
+		color: var(--text-secondary);
+		font-size: 15px;
+		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+	}
+	.edit-name-btn:active {
+		background: rgba(0, 0, 0, 0.06);
 	}
 	.player-role {
 		font-size: 12px;
