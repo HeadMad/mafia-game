@@ -1,0 +1,23 @@
+:root {
+	--bg: #f5f5f7;
+	--surface: #ffffff;
+	--text: #1d1d1f;
+	--text-secondary: #86868b;
+	--accent: #007aff;
+	--predator: #ff3b30;
+	--peaceful: #34c759;
+	--special: #af52de;
+	--spirit: #5ac8fa;
+	--eagle: #ff9500;
+	--fox: #ff9f0a;
+	--vole: #bf5af2;
+	--gammarus: #64d2ff;
+	--angara: #0a84ff;
+	--mute: #ffd60a;
+	--exile: #8e8e93;
+	--dead-bg: rgba(0, 0, 0, 0.04);
+	--radius: 12px;
+	--font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial,
+		sans-serif;
+	--nav-h: 64px;
+}

@@ -1,0 +1,321 @@
+<script>
+	import roleMeta from '$js/roleMeta';
+	import badgeMeta from '$js/badgeMeta';
+
+	/**
+	 * @typedef {Object} Player
+	 * @property {number} id
+	 * @property {string} name
+	 * @property {string|null} role
+	 * @property {boolean} alive
+	 * @property {Array<{type: string, round: number}>} badges
+	 * @property {string|null} faction
+	 */
+
+	/**
+	 * @typedef {Object} Props
+	 * @property {Player} player
+	 * @property {boolean} [highlight]
+	 * @property {boolean} [avatarLocked]
+	 * @property {() => void} onavatar
+	 * @property {() => void} onlongpress
+	 * @property {() => void} onrow
+	 * @property {(type: string) => void} onbadge
+	 * @property {(name: string) => void} onrename
+	 */
+
+	/** @type {Props} */
+	let {
+		player,
+		highlight = false,
+		avatarLocked = false,
+		onavatar,
+		onlongpress,
+		onrow,
+		onbadge,
+		onrename
+	} = $props();
+
+	let editing = $state(false);
+	let editValue = $state('');
+	let longTimer = $state(/** @type {ReturnType<typeof setTimeout>|null} */ (null));
+	let longFired = $state(false);
+	let lastTap = $state(0);
+
+	const icon = $derived(player.role ? roleMeta[player.role]?.icon || '❓' : '');
+	const roleLabel = $derived(player.role ? roleMeta[player.role]?.label || '' : 'скрыто');
+
+	function startLong() {
+		longFired = false;
+		longTimer = setTimeout(() => {
+			longFired = true;
+			onlongpress();
+		}, 550);
+	}
+
+	function cancelLong() {
+		if (longTimer) {
+			clearTimeout(longTimer);
+			longTimer = null;
+		}
+	}
+
+	function endLong() {
+		cancelLong();
+		if (!longFired) onavatar();
+	}
+
+	function startEdit() {
+		editing = true;
+		editValue = player.name;
+	}
+
+	function finishEdit() {
+		onrename(editValue.trim() || `Игрок ${player.id}`);
+		editing = false;
+	}
+</script>
+
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="player-row"
+	class:dead={!player.alive}
+	class:highlight
+	class:faction-predator={player.faction === 'predator'}
+	class:faction-peaceful={player.faction === 'peaceful'}
+	class:faction-special={player.faction === 'special'}
+	class:faction-owl={player.faction === 'owl'}
+	onclick={(e) => {
+		const t = /** @type {HTMLElement} */ (e.target);
+		if (t.closest('.player-avatar') || t.closest('.badge') || t.closest('.player-name-input'))
+			return;
+		onrow();
+	}}
+>
+	<div class="player-num">{player.id}</div>
+
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="player-avatar"
+		class:filled={!!player.role}
+		class:locked={avatarLocked}
+		ontouchstart={startLong}
+		ontouchend={endLong}
+		ontouchmove={cancelLong}
+		onmousedown={startLong}
+		onmouseup={endLong}
+		onmouseleave={cancelLong}
+		onclick={(e) => e.stopPropagation()}
+	>
+		{icon}
+	</div>
+
+	<div class="player-info">
+		{#if editing}
+			<input
+				class="player-name-input"
+				bind:value={editValue}
+				onblur={finishEdit}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') {
+						e.preventDefault();
+						finishEdit();
+					}
+					if (e.key === 'Escape') {
+						editValue = player.name;
+						editing = false;
+					}
+				}}
+			/>
+		{:else}
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="player-name"
+				ondblclick={(e) => {
+					e.stopPropagation();
+					startEdit();
+				}}
+				ontouchend={(e) => {
+					const now = Date.now();
+					if (now - lastTap < 350) {
+						e.preventDefault();
+						e.stopPropagation();
+						startEdit();
+					}
+					lastTap = now;
+				}}
+			>
+				{player.name}
+			</div>
+		{/if}
+		<div class="player-role">{roleLabel}</div>
+	</div>
+
+	<div class="player-badges">
+		{#each player.badges as b (b.type + b.round)}
+			{@const meta = badgeMeta[b.type]}
+			{#if meta}
+				<button
+					type="button"
+					class="badge {meta.cls}"
+					onclick={(e) => {
+						e.stopPropagation();
+						onbadge(b.type);
+					}}
+				>
+					{meta.text}
+				</button>
+			{/if}
+		{/each}
+	</div>
+</div>
+
+<style>
+	.player-row {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 10px 12px;
+		background: var(--surface);
+		border-radius: var(--radius);
+		min-height: 56px;
+		user-select: none;
+		cursor: pointer;
+	}
+
+	.player-row.faction-predator {
+		background: rgba(255, 59, 48, 0.08);
+	}
+	.player-row.faction-peaceful {
+		background: rgba(52, 199, 89, 0.08);
+	}
+	.player-row.faction-special {
+		background: rgba(175, 82, 222, 0.08);
+	}
+	.player-row.faction-owl {
+		background: rgba(175, 82, 222, 0.12);
+	}
+	.player-row.dead {
+		opacity: 0.4;
+		background: var(--dead-bg) !important;
+		cursor: default;
+	}
+	.player-row.dead .player-name,
+	.player-row.dead .player-num {
+		text-decoration: line-through;
+	}
+	.player-row.highlight {
+		box-shadow: 0 0 0 2px var(--accent);
+	}
+
+	.player-num {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: rgba(0, 0, 0, 0.05);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--text-secondary);
+		flex-shrink: 0;
+		pointer-events: none;
+	}
+
+	.player-avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		border: 1.5px dashed rgba(0, 0, 0, 0.18);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 20px;
+		flex-shrink: 0;
+		cursor: pointer;
+		background: transparent;
+		touch-action: manipulation;
+	}
+	.player-avatar.filled {
+		border-style: solid;
+		border-color: transparent;
+		background: rgba(0, 0, 0, 0.04);
+	}
+	.player-avatar.locked {
+		cursor: default;
+		opacity: 0.85;
+	}
+
+	.player-info {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	.player-name {
+		font-size: 16px;
+		font-weight: 560;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.player-role {
+		font-size: 12px;
+		color: var(--text-secondary);
+		font-weight: 500;
+	}
+	.player-name-input {
+		font-size: 16px;
+		font-weight: 560;
+		border: none;
+		background: transparent;
+		outline: none;
+		width: 100%;
+		color: var(--text);
+		padding: 0;
+	}
+
+	.player-badges {
+		display: flex;
+		gap: 4px;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		max-width: 120px;
+	}
+	.badge {
+		font-size: 11px;
+		font-weight: 700;
+		padding: 3px 8px;
+		border-radius: 10px;
+		color: #fff;
+		border: none;
+		white-space: nowrap;
+	}
+	.badge.attack {
+		background: var(--predator);
+	}
+	.badge.protect {
+		background: var(--spirit);
+		color: #003a4a;
+	}
+	.badge.check {
+		background: var(--eagle);
+		color: #3a1f00;
+	}
+	.badge.mute {
+		background: var(--mute);
+		color: #3a2e00;
+	}
+	.badge.clean {
+		background: var(--gammarus);
+		color: #003a4a;
+	}
+	.badge.gift {
+		background: var(--angara);
+	}
+	.badge.exile {
+		background: var(--exile);
+	}
+</style>
