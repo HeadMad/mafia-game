@@ -7,7 +7,9 @@
 	 * @property {string} [cancelText]
 	 * @property {boolean} [danger]
 	 * @property {boolean} [alertOnly]
-	 * @property {(v: boolean) => void} onresolve
+	 * @property {string|null} [checkboxLabel]
+	 * @property {boolean} [checkboxDefault]
+	 * @property {(v: { ok: boolean, checked: boolean }) => void} onresolve
 	 */
 
 	/** @type {Props} */
@@ -18,8 +20,16 @@
 		cancelText = 'Отмена',
 		danger = false,
 		alertOnly = false,
+		checkboxLabel = null,
+		checkboxDefault = true,
 		onresolve
 	} = $props();
+
+	let checked = $state(true);
+
+	$effect(() => {
+		if (open) checked = checkboxDefault;
+	});
 </script>
 
 {#if open}
@@ -27,14 +37,20 @@
 		class="confirm-overlay"
 		role="presentation"
 		onclick={(e) => {
-			if (e.target === e.currentTarget) onresolve(false);
+			if (e.target === e.currentTarget) onresolve({ ok: false, checked });
 		}}
 	>
 		<div class="confirm-card" role="dialog" aria-modal="true">
 			<p>{message}</p>
+			{#if checkboxLabel}
+				<label class="confirm-check">
+					<input type="checkbox" bind:checked />
+					<span>{checkboxLabel}</span>
+				</label>
+			{/if}
 			<div class="confirm-actions">
 				{#if !alertOnly}
-					<button type="button" class="confirm-cancel" onclick={() => onresolve(false)}>
+					<button type="button" class="confirm-cancel" onclick={() => onresolve({ ok: false, checked })}>
 						{cancelText}
 					</button>
 				{/if}
@@ -42,7 +58,7 @@
 					type="button"
 					class="confirm-ok"
 					class:danger
-					onclick={() => onresolve(true)}
+					onclick={() => onresolve({ ok: true, checked })}
 				>
 					{okText}
 				</button>
@@ -78,8 +94,32 @@
 		font-weight: 500;
 		line-height: 1.45;
 		color: var(--text);
-		margin-bottom: 18px;
+		margin-bottom: 14px;
 		white-space: pre-wrap;
+	}
+
+	.confirm-check {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		justify-content: flex-start;
+		margin: 0 0 16px;
+		padding: 10px 12px;
+		background: rgba(0, 0, 0, 0.04);
+		border-radius: 10px;
+		font-size: 15px;
+		font-weight: 500;
+		color: var(--text);
+		cursor: pointer;
+		user-select: none;
+		text-align: left;
+	}
+
+	.confirm-check input {
+		width: 18px;
+		height: 18px;
+		accent-color: var(--accent);
+		flex-shrink: 0;
 	}
 
 	.confirm-actions {

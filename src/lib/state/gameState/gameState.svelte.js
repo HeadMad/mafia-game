@@ -44,7 +44,7 @@ function createGameState() {
 	/** @type {{ fromRound: number, toRound: number, lines: string[] }|null} */
 	let intermission = $state(null);
 
-	/** @type {{ open: boolean, message: string, okText: string, cancelText: string, danger: boolean, alertOnly: boolean, resolve: ((v: boolean) => void)|null }} */
+	/** @type {{ open: boolean, message: string, okText: string, cancelText: string, danger: boolean, alertOnly: boolean, checkboxLabel: string|null, checkboxDefault: boolean, resolve: ((v: { ok: boolean, checked: boolean }) => void)|null }} */
 	let confirm = $state({
 		open: false,
 		message: '',
@@ -52,13 +52,18 @@ function createGameState() {
 		cancelText: 'Отмена',
 		danger: false,
 		alertOnly: false,
+		checkboxLabel: null,
+		checkboxDefault: true,
 		resolve: null
 	});
 
+	/** Имена с прошлой партии (если отметили «Сохранить имена») */
+	let savedNames = $state(/** @type {string[]} */ ([]));
+
 	/**
 	 * @param {string} message
-	 * @param {{ okText?: string, cancelText?: string, danger?: boolean, alertOnly?: boolean }} [options]
-	 * @returns {Promise<boolean>}
+	 * @param {{ okText?: string, cancelText?: string, danger?: boolean, alertOnly?: boolean, checkboxLabel?: string, checkboxDefault?: boolean }} [options]
+	 * @returns {Promise<{ ok: boolean, checked: boolean }>}
 	 */
 	function showConfirm(message, options = {}) {
 		return new Promise((resolve) => {
@@ -69,11 +74,16 @@ function createGameState() {
 				cancelText: options.cancelText || 'Отмена',
 				danger: !!options.danger,
 				alertOnly: !!options.alertOnly,
+				checkboxLabel: options.checkboxLabel || null,
+				checkboxDefault: options.checkboxDefault !== false,
 				resolve
 			};
 		});
 	}
 
+	/**
+	 * @param {{ ok: boolean, checked: boolean }} result
+	 */
 	function closeConfirm(result) {
 		const r = confirm.resolve;
 		confirm = { ...confirm, open: false, resolve: null };
@@ -209,6 +219,15 @@ function createGameState() {
 
 	function createGame(cfg) {
 		applyConfig(cfg, false);
+		if (savedNames.length) {
+			players = players.map((p, i) => {
+				if (i < savedNames.length && savedNames[i]) {
+					return { ...p, name: savedNames[i] };
+				}
+				return p;
+			});
+			savedNames = [];
+		}
 		setup = false;
 		editingSettings = false;
 		addLog(`Партия создана. Круг 1. Игроков: ${players.length}`);
@@ -223,7 +242,12 @@ function createGameState() {
 		save();
 	}
 
-	function resetToNewGame() {
+	function resetToNewGame(keepNames = false) {
+		if (keepNames) {
+			savedNames = players.map((p) => p.name);
+		} else {
+			savedNames = [];
+		}
 		setup = true;
 		editingSettings = false;
 		round = 1;
@@ -345,8 +369,8 @@ function createGameState() {
 			const msg = prevOwl
 				? `Переназначить Сову с игрока ${prevOwl.id} на игрока ${player.id} («${player.name}»)?`
 				: `Назначить игрока ${player.id} («${player.name}») Совой?`;
-			const ok = await showConfirm(msg, { okText: prevOwl ? 'Переназначить' : 'Назначить' });
-			if (!ok) return;
+			const res = await showConfirm(msg, { okText: prevOwl ? 'Переназначить' : 'Назначить' });
+			if (!res.ok) return;
 			players = players.map((p) => {
 				if (prevOwl && p.id === prevOwl.id) {
 					return { ...p, role: 'predator', faction: 'predator' };
@@ -361,10 +385,10 @@ function createGameState() {
 		}
 
 		if (player.role === 'owl') {
-			const ok = await showConfirm(`Снять роль Совы с игрока ${player.id} (станет Хищником)?`, {
+			const res = await showConfirm(`Снять роль Совы с игрока ${player.id} (станет Хищником)?`, {
 				okText: 'Снять'
 			});
-			if (!ok) return;
+			if (!res.ok) return;
 			players = players.map((p, i) =>
 				i === idx ? { ...p, role: 'predator', faction: 'predator' } : p
 			);
@@ -380,8 +404,8 @@ function createGameState() {
 				const msg = prevVole
 					? `Переназначить Полёвку с игрока ${prevVole.id} на игрока ${player.id} («${player.name}»)?`
 					: `Назначить игрока ${player.id} («${player.name}») Ольхонской Полёвкой?`;
-				const ok = await showConfirm(msg, { okText: prevVole ? 'Переназначить' : 'Назначить' });
-				if (!ok) return;
+				const res = await showConfirm(msg, { okText: prevVole ? 'Переназначить' : 'Назначить' });
+				if (!res.ok) return;
 				players = players.map((p) => {
 					if (prevVole && p.id === prevVole.id) {
 						return { ...p, role: 'peaceful', faction: 'peaceful', autoPeaceful: true };
@@ -402,8 +426,8 @@ function createGameState() {
 		}
 
 		if (player.role === 'vole') {
-			const ok = await showConfirm(`Снять роль Полёвки с игрока ${player.id}?`, { okText: 'Снять' });
-			if (!ok) return;
+			const res = await showConfirm(`Снять роль Полёвки с игрока ${player.id}?`, { okText: 'Снять' });
+			if (!res.ok) return;
 			players = players.map((p, i) =>
 				i === idx ? { ...p, role: 'peaceful', faction: 'peaceful', autoPeaceful: true } : p
 			);

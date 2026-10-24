@@ -46,11 +46,13 @@
 
 	async function onNewGame() {
 		menuOpen = false;
-		const ok = await gameState.showConfirm('Завершить текущую игру и начать новую?', {
+		const res = await gameState.showConfirm('Завершить текущую игру и начать новую?', {
 			okText: 'Новая игра',
-			danger: true
+			danger: true,
+			checkboxLabel: 'Сохранить имена',
+			checkboxDefault: true
 		});
-		if (ok) gameState.resetToNewGame();
+		if (res.ok) gameState.resetToNewGame(res.checked);
 	}
 
 	function openModal(title, body) {
@@ -285,6 +287,8 @@
 	cancelText={gameState.confirm.cancelText}
 	danger={gameState.confirm.danger}
 	alertOnly={gameState.confirm.alertOnly}
+	checkboxLabel={gameState.confirm.checkboxLabel}
+	checkboxDefault={gameState.confirm.checkboxDefault}
 	onresolve={(v) => gameState.closeConfirm(v)}
 />
 
