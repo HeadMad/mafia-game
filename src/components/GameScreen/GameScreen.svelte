@@ -149,9 +149,29 @@
 	</header>
 
 	{#if gameState.gameOver}
-		<div class="win-banner">
-			<h3>{gameState.gameOver.text}</h3>
-			<p>{gameState.gameOver.sub}</p>
+		<div class="win-screen" class:owl={gameState.gameOver.winner === 'owl'}>
+			<div class="win-burst" aria-hidden="true"></div>
+			<div class="win-card">
+				<div class="win-emoji">{gameState.gameOver.winner === 'owl' ? '🦉' : '🏆'}</div>
+				<p class="win-kicker">Игра окончена</p>
+				<h3 class="win-title">{gameState.gameOver.text}</h3>
+				<p class="win-sub">{gameState.gameOver.sub}</p>
+				<button
+					type="button"
+					class="win-btn"
+					onclick={async () => {
+						const res = await gameState.showConfirm('Завершить и начать новую игру?', {
+							okText: 'Новая игра',
+							danger: true,
+							checkboxLabel: 'Сохранить имена',
+							checkboxDefault: true
+						});
+						if (res.ok) gameState.resetToNewGame(res.checked);
+					}}
+				>
+					Новая игра
+				</button>
+			</div>
 		</div>
 	{:else if gameState.intermission}
 		<div class="intermission">
@@ -384,23 +404,133 @@
 		color: var(--predator);
 	}
 
-	.win-banner {
-		background: var(--surface);
-		border-radius: var(--radius);
-		padding: 20px 16px;
-		margin-bottom: 10px;
-		text-align: center;
-		box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.35);
+	.win-screen {
+		position: relative;
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px 8px calc(var(--nav-h) + 24px);
+		overflow: hidden;
 	}
-	.win-banner h3 {
-		font-size: 22px;
+	.win-burst {
+		position: absolute;
+		inset: 10% 5%;
+		border-radius: 50%;
+		background: radial-gradient(circle, rgba(52, 199, 89, 0.22) 0%, transparent 70%);
+		animation: win-pulse 2.4s ease-in-out infinite;
+		pointer-events: none;
+	}
+	.win-screen.owl .win-burst {
+		background: radial-gradient(circle, rgba(175, 82, 222, 0.22) 0%, transparent 70%);
+	}
+	.win-card {
+		position: relative;
+		width: 100%;
+		background: var(--surface);
+		border-radius: 20px;
+		padding: 28px 22px 22px;
+		text-align: center;
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+		animation: win-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+	}
+	.win-emoji {
+		font-size: 56px;
+		line-height: 1;
+		margin-bottom: 12px;
+		animation: win-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+	}
+	.win-kicker {
+		font-size: 12px;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.6px;
+		color: var(--text-secondary);
+		margin-bottom: 8px;
+	}
+	.win-title {
+		font-size: 26px;
 		font-weight: 800;
+		letter-spacing: -0.4px;
 		margin-bottom: 8px;
 		color: var(--peaceful);
+		background: linear-gradient(120deg, #34c759, #30d158, #64d2ff);
+		background-size: 200% 200%;
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		animation: win-shine 3s ease-in-out infinite;
 	}
-	.win-banner p {
-		font-size: 14px;
+	.win-screen.owl .win-title {
+		background: linear-gradient(120deg, #af52de, #bf5af2, #5e5ce6);
+		background-size: 200% 200%;
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+	}
+	.win-sub {
+		font-size: 15px;
+		line-height: 1.45;
 		color: var(--text-secondary);
+		margin-bottom: 22px;
+	}
+	.win-btn {
+		display: block;
+		width: 100%;
+		padding: 16px;
+		border: none;
+		border-radius: 14px;
+		background: var(--accent);
+		color: #fff;
+		font-size: 17px;
+		font-weight: 600;
+	}
+	.win-btn:active {
+		opacity: 0.75;
+	}
+	@keyframes win-in {
+		from {
+			opacity: 0;
+			transform: translateY(18px) scale(0.96);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
+	@keyframes win-pop {
+		0% {
+			opacity: 0;
+			transform: scale(0.4) rotate(-12deg);
+		}
+		60% {
+			opacity: 1;
+			transform: scale(1.12) rotate(4deg);
+		}
+		100% {
+			opacity: 1;
+			transform: scale(1) rotate(0);
+		}
+	}
+	@keyframes win-pulse {
+		0%,
+		100% {
+			transform: scale(0.92);
+			opacity: 0.7;
+		}
+		50% {
+			transform: scale(1.08);
+			opacity: 1;
+		}
+	}
+	@keyframes win-shine {
+		0%,
+		100% {
+			background-position: 0% 50%;
+		}
+		50% {
+			background-position: 100% 50%;
+		}
 	}
 
 	.phase-speech {

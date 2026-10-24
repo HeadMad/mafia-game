@@ -57,8 +57,8 @@ function createGameState() {
 		resolve: null
 	});
 
-	/** Имена с прошлой партии (если отметили «Сохранить имена») */
-	let savedNames = $state(/** @type {string[]} */ ([]));
+	/** Имена с прошлой партии по id игрока (если отметили «Сохранить имена») */
+	let savedNames = $state(/** @type {Record<number, string>} */ ({}));
 
 	/**
 	 * @param {string} message
@@ -219,14 +219,14 @@ function createGameState() {
 
 	function createGame(cfg) {
 		applyConfig(cfg, false);
-		if (savedNames.length) {
-			players = players.map((p, i) => {
-				if (i < savedNames.length && savedNames[i]) {
-					return { ...p, name: savedNames[i] };
-				}
+		const names = savedNames;
+		if (names && Object.keys(names).length) {
+			players = players.map((p) => {
+				const n = names[p.id];
+				if (n) return { ...p, name: n };
 				return p;
 			});
-			savedNames = [];
+			savedNames = {};
 		}
 		setup = false;
 		editingSettings = false;
@@ -244,9 +244,14 @@ function createGameState() {
 
 	function resetToNewGame(keepNames = false) {
 		if (keepNames) {
-			savedNames = players.map((p) => p.name);
+			/** @type {Record<number, string>} */
+			const map = {};
+			players.forEach((p) => {
+				map[p.id] = p.name;
+			});
+			savedNames = map;
 		} else {
-			savedNames = [];
+			savedNames = {};
 		}
 		setup = true;
 		editingSettings = false;
