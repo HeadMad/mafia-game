@@ -41,28 +41,96 @@
 	let longTimer = $state(/** @type {ReturnType<typeof setTimeout>|null} */ (null));
 	let longFired = $state(false);
 	let lastTap = $state(0);
+	/** После touch игнорируем мышиные/клик-события (ghost click на другую строку после re-render) */
+	let touchActive = $state(false);
+	let suppressClickUntil = $state(0);
 
 	const icon = $derived(player.role ? roleMeta[player.role]?.icon || '❓' : '');
 	const roleLabel = $derived(player.role ? roleMeta[player.role]?.label || '' : 'скрыто');
 
-	function startLong() {
-		longFired = false;
-		longTimer = setTimeout(() => {
-			longFired = true;
-			onlongpress();
-		}, 550);
-	}
-
-	function cancelLong() {
+	function clearLongTimer() {
 		if (longTimer) {
 			clearTimeout(longTimer);
 			longTimer = null;
 		}
 	}
 
-	function endLong() {
-		cancelLong();
+	/** @param {TouchEvent} e */
+	function onAvatarTouchStart(e) {
+		touchActive = true;
+		longFired = false;
+		clearLongTimer();
+		// фиксируем id на старте жеста
+		const id = player.id;
+		longTimer = setTimeout(() => {
+			longFired = true;
+			onlongpress();
+			suppressClickUntil = Date.now() + 600;
+		}, 550);
+	}
+
+	/** @param {TouchEvent} e */
+	function onAvatarTouchMove(e) {
+		// палец ушёл — отменяем long-press, короткий тап тоже не считаем
+		clearLongTimer();
+		longFired = true; // блокируем end → onavatar
+	}
+
+	/** @param {TouchEvent} e */
+	function onAvatarTouchEnd(e) {
+		clearLongTimer();
+		// Гасим последующий synthetic click, иначе после re-render он попадает в другую карточку
+		e.preventDefault();
+		suppressClickUntil = Date.now() + 600;
+		const wasLong = longFired;
+		longFired = false;
+		touchActive = false;
+		if (!wasLong) {
+			onavatar();
+		}
+	}
+
+	/** @param {MouseEvent} e */
+	function onAvatarMouseDown(e) {
+		// На тач-устройствах после touch приходит mousedown — игнорируем
+		if (touchActive || Date.now() < suppressClickUntil) return;
+		if (e.button !== 0) return;
+		longFired = false;
+		clearLongTimer();
+		longTimer = setTimeout(() => {
+			longFired = true;
+			onlongpress();
+		}, 550);
+	}
+
+	/** @param {MouseEvent} e */
+	function onAvatarMouseUp(e) {
+		if (touchActive || Date.now() < suppressClickUntil) return;
+		clearLongTimer();
 		if (!longFired) onavatar();
+		longFired = false;
+	}
+
+	function onAvatarMouseLeave() {
+		if (touchActive) return;
+		clearLongTimer();
+	}
+
+	/** @param {MouseEvent} e */
+	function onAvatarClick(e) {
+		e.stopPropagation();
+		// click после touch уже обработан в touchend
+		if (Date.now() < suppressClickUntil) {
+			e.preventDefault();
+		}
+	}
+
+	/** @param {MouseEvent} e */
+	function onRowClick(e) {
+		if (Date.now() < suppressClickUntil) return;
+		const t = /** @type {HTMLElement} */ (e.target);
+		if (t.closest('.player-avatar') || t.closest('.badge') || t.closest('.player-name-input')) return;
+		onrow();
 	}
 
 	function startEdit() {
@@ -85,12 +153,7 @@
 	class:faction-peaceful={player.faction === 'peaceful'}
 	class:faction-special={player.faction === 'special'}
 	class:faction-owl={player.faction === 'owl'}
-	onclick={(e) => {
-		const t = /** @type {HTMLElement} */ (e.target);
-		if (t.closest('.player-avatar') || t.closest('.badge') || t.closest('.player-name-input'))
-			return;
-		onrow();
-	}}
+	onclick={onRowClick}
 >
 	<div class="player-num">{player.id}</div>
 
@@ -99,13 +162,14 @@
 		class="player-avatar"
 		class:filled={!!player.role}
 		class:locked={avatarLocked}
-		ontouchstart={startLong}
-		ontouchend={endLong}
-		ontouchmove={cancelLong}
-		onmousedown={startLong}
-		onmouseup={endLong}
-		onmouseleave={cancelLong}
-		onclick={(e) => e.stopPropagation()}
+		ontouchstart={onAvatarTouchStart}
+		ontouchmove={onAvatarTouchMove}
+		ontouchend={onAvatarTouchEnd}
+		ontouchcancel={onAvatarTouchEnd}
+		onmousedown={onAvatarMouseDown}
+		onmouseup={onAvatarMouseUp}
+		onmouseleave={onAvatarMouseLeave}
+		onclick={onAvatarClick}
 	>
 		{icon}
 	</div>
