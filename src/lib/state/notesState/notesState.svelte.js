@@ -33,11 +33,12 @@ function createNotesState() {
 	}
 
 	/**
+	 * @param {string} [text]
 	 * @returns {string}
 	 */
-	function addNote() {
+	function addNote(text = '') {
 		const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-		notes = [{ id, text: '', updatedAt: Date.now() }, ...notes];
+		notes = [{ id, text, updatedAt: Date.now() }, ...notes];
 		persist();
 		return id;
 	}
