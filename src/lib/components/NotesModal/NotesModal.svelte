@@ -13,10 +13,6 @@
 	/** @type {string|null} */
 	let focusId = $state(null);
 
-	$effect(() => {
-		if (open) notesState.ensureLoaded();
-	});
-
 	function onAdd() {
 		const id = notesState.addNote();
 		focusId = id;
