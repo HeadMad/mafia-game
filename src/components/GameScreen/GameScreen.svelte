@@ -1,12 +1,14 @@
 <script>
 	import PlayerRow from '$components/PlayerRow';
 	import ConfirmModal from '$components/ConfirmModal';
+	import NotesModal from '$components/NotesModal';
 	import gameState from '$state/gameState';
 	import roleMeta from '$js/roleMeta';
 	import charDesc from '$js/charDesc';
 	import { phaseShort, phaseSpeechText, phaseActionInfo } from '$js/phaseHelpers';
 
 	let menuOpen = $state(false);
+	let notesOpen = $state(false);
 	let modal = $state(/** @type {{ open: boolean, title: string, body: string }} */ ({
 		open: false,
 		title: '',
@@ -131,6 +133,16 @@
 				}}
 			>
 				Настройки
+			</button>
+			<button
+				type="button"
+				class="menu-item"
+				onclick={() => {
+					menuOpen = false;
+					notesOpen = true;
+				}}
+			>
+				Заметки
 			</button>
 			<button
 				type="button"
@@ -299,6 +311,8 @@
 		</div>
 	</div>
 {/if}
+
+<NotesModal open={notesOpen} onclose={() => (notesOpen = false)} />
 
 <ConfirmModal
 	open={gameState.confirm.open}
